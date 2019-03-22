@@ -14,6 +14,9 @@ TODO: in each sub-graph, define a way to map "external connections"... These are
 
 from sys import argv
 
+# Expect the cluster builder to provide the number of partitions in a comment looking like this:
+NR_PARTITIONS_ID = "// nr partitions: "
+
 
 class ProgramConfiguration:
     """User arguments
@@ -62,7 +65,7 @@ class EdgeReader:
         self.line = line
 
     def translate(self):
-        items = self.line.strip().replace("(", "").replace(")", "").split(":")
+        items = self.line.replace("(", "").replace(")", "").split(":")
         if len(items) == 2:
             (node1, node2) = map(lambda s: s.split("."), items)
             return Edge(Node(node1[0], node1[1]), Node(node2[0], node2[1]))
@@ -84,6 +87,7 @@ class Partition:
         self.file.write("%s\n" % edge)
 
     def close(self):
+        self.file.write("\n")
         self.file.close()
 
 
@@ -96,11 +100,27 @@ class MetaGraph:
         file_name = "%s_meta.txt" % output_radix
         print("creating file %s" % file_name)
         self.file = open(file_name, "wt")
+        # Virtual node counter: whenever adding a new inter-connect from P:X to Q:Y, create one
+        # edge from virtual node P to virtual node "PXQY" and one from this new virtual node to
+        # virtual node Q. Need a counter to assign arbitrary indexes to "PXQY"
+        self.vnode_counter = 0
+
+    def set_nr_partitions(self, nr_partitions):
+        self.vnode_counter = nr_partitions + 1
 
     def record(self, x, y):
-        self.file.write("%s:%s\n" % (x, y))
+        # Graph is non-oriented. No need to record edges in the two directions. The arbitrary rule then
+        # is to record the interconnect iff the target partition is greater than the source one.
+        px = int(x.partition)
+        py = int(y.partition)
+        if px < py:
+            self.file.write("%% %s:%s" % (x, y))
+            self.file.write("%d %d\n" % (px, self.vnode_counter))
+            self.file.write("%d %d\n" % (self.vnode_counter, py))
+            self.vnode_counter += 1
 
     def close(self):
+        self.file.write("\n")
         self.file.close()
 
 
@@ -142,6 +162,9 @@ class EdgeProcessor:
     def __init__(self, output_radix):
         self.partition_map = PartitionMap(output_radix)
 
+    def set_nr_partitions(self, nr_partitions):
+        self.partition_map.meta.set_nr_partitions(nr_partitions)
+
     def handle_edge(self, edge):
         partition = self.partition_map.get_or_create(edge.x.partition)
         partition.add_edge(edge)
@@ -159,9 +182,11 @@ class EdgeProcessor:
 configuration = ProgramConfiguration(argv)
 processor = EdgeProcessor(configuration.output_radix())
 with open(configuration.input_file(), "rt") as cluster:
-    each_line = cluster.readline()
+    each_line = cluster.readline().strip()
     while each_line:
-        if not each_line.startswith("//"):
+        if each_line.startswith(NR_PARTITIONS_ID):
+            processor.set_nr_partitions(int(each_line.replace(NR_PARTITIONS_ID, "")))
+        elif not each_line.startswith("//"):
             e = EdgeReader(each_line).translate()
             if e is not None:
                 processor.handle_edge(e)
