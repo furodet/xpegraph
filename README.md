@@ -26,6 +26,9 @@ The scripts
       * Non-oriented
       * No weighted edges
       * Node identifier must be (1,2...)
+  * BuildFragments.py: reads a cluster to produce mtx files describing the different graphes:
+      * Sub-graphes implementing each fragment
+      * A "meta-graph" that inter-connects the fragments via "virtual nodes"
   * DotGraph.py: translates an mtx file to a dot script, which can be plotted with neato
 
 Example
@@ -52,5 +55,12 @@ The four first lines are comments, next ones describe connections from node 1, i
   * (0.1):(1:32): node 1 is connected to node 32 in partition 1
   * (0.1):(0:22): node 1 is connected to node 22 in the same partition
   * (0.1):(0.20): node 1 is connected to node 20 in the same partition
+
+```
+  python BuildFragments.py ../../clusters/zachary.txt ../../clusters/zachary_cluster
+```
+
+Creates 4 files (one per partition, called zachary_cluster_#N) representing the sub-graphes and a file,
+called zachary_cluster_meta.mtx, representing the "meta-graph".
 
 
