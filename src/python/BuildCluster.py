@@ -17,8 +17,11 @@ Output is a cluster description, in a proprietary text format:
 
 from sys import argv
 from time import time
+from typing import List, Union, TextIO
 
+from numpy.core.records import ndarray
 from scipy.io import mmread
+from scipy.sparse import coo_matrix
 from sklearn.cluster import SpectralClustering
 
 
@@ -29,19 +32,19 @@ class ProgramConfiguration:
     each argument type.
     """
 
-    def __init__(self, args):
+    def __init__(self, args: List[str]):
         if len(args) != 4:
             print("Usage: %s <mtx file> <number of partitions> <output file>" % args[0])
             exit(1)
         self.args = args
 
-    def input_file(self):
+    def input_file(self) -> str:
         return self.args[1]
 
-    def output_file(self):
+    def output_file(self) -> str:
         return self.args[3]
 
-    def nr_partitions(self):
+    def nr_partitions(self) -> int:
         return int(self.args[2])
 
 
@@ -49,11 +52,11 @@ class Cluster:
     """Invokes spectral clustering on a graph to create a given number of partitions
     """
 
-    def __init__(self, graph, nr_partitions):
+    def __init__(self, graph: Union[ndarray, coo_matrix], nr_partitions):
         self.graph = graph
         self.sc = SpectralClustering(nr_partitions, affinity="precomputed", n_init=100)
 
-    def create(self):
+    def create(self) -> List[int]:
         self.sc.fit(self.graph)
         return self.sc.labels_
 
@@ -64,11 +67,11 @@ class ClusterPrinter:
     For example (5.8):(7.10) means "node number 8 in sub-graph 5 is connected to node number 10 in sub-graph 10)
     """
 
-    def __init__(self, cluster, graph):
+    def __init__(self, cluster: List[int], graph: Union[ndarray, coo_matrix]):
         self.cluster = cluster
         self.graph = graph
 
-    def write_into(self, out):
+    def write_into(self, out: TextIO):
         for node_id in range(len(self.cluster)):
             # Assume nodes are indexed from 1 to N
             source_node_index = node_id + 1
@@ -84,7 +87,7 @@ class ClusterPrinter:
 
 # ================================================================================
 class Main:
-    def __init__(self, program_configuration):
+    def __init__(self, program_configuration: ProgramConfiguration):
         self.input_file = program_configuration.input_file()
         self.nr_partitions = program_configuration.nr_partitions()
         self.output_file = program_configuration.output_file()
@@ -95,7 +98,7 @@ class Main:
         self.__write_result(self.output_file, g, c, self.input_file, self.nr_partitions)
 
     @classmethod
-    def __load_file(cls, input_file):
+    def __load_file(cls, input_file: str) -> Union[ndarray, coo_matrix]:
         print("loading file %s" % input_file)
         start_time = time()
         graph = mmread(input_file)
@@ -103,7 +106,7 @@ class Main:
         return graph
 
     @classmethod
-    def __partition(cls, graph, nr_partitions):
+    def __partition(cls, graph: Union[ndarray, coo_matrix], nr_partitions: int) -> List[int]:
         print("partitioning")
         start_time = time()
         cluster = Cluster(graph, nr_partitions).create()
@@ -111,7 +114,8 @@ class Main:
         return cluster
 
     @classmethod
-    def __write_result(cls, output_file, graph, cluster, input_file, nr_partitions):
+    def __write_result(cls, output_file: str, graph: Union[ndarray, coo_matrix], cluster: List[int], input_file: str,
+                       nr_partitions: int):
         with open(output_file, "wt") as f:
             f.write("// source: %s\n" % input_file)
             f.write("// nr partitions: %s\n" % nr_partitions)

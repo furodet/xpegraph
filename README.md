@@ -9,6 +9,9 @@ Python scripts can be found in src/python. They use scikit-learn:
   pip install scikit-learn
 ```
 
+Python scripts require type-checking features, available since **Python 3.6**. Project does
+not work with older versions of Python.
+
 Project structure
 -----------------
 
@@ -26,10 +29,11 @@ The scripts
       * Non-oriented
       * No weighted edges
       * Node identifier must be (1,2...)
-  * BuildFragments.py: reads a cluster to produce mtx files describing the different graphes:
+  * BuildFragments.py: reads a cluster to produce mtx files describing the different partitions:
       * Sub-graphes implementing each fragment
       * A "meta-graph" that inter-connects the fragments via "virtual nodes"
   * DotGraph.py: translates an mtx file to a dot script, which can be plotted with neato
+  * CreateRandGraph.py: creates a random graph, for tests
 
 Example
 -------

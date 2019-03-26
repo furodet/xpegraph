@@ -13,6 +13,7 @@ TODO: in each sub-graph, define a way to map "external connections"... These are
 """
 
 from sys import argv
+from typing import List, Union, TextIO
 
 # Expect the cluster builder to provide the number of partitions in a comment looking like this:
 NR_PARTITIONS_ID = "// nr partitions: "
@@ -25,34 +26,34 @@ class ProgramConfiguration:
     each argument type.
     """
 
-    def __init__(self, args):
+    def __init__(self, args: List[str]):
         if len(args) != 3:
             print("Usage: %s <cluster file> <output base name>" % args[0])
             exit(1)
         self.args = args
 
-    def input_file(self):
+    def input_file(self) -> str:
         return self.args[1]
 
-    def output_basename(self):
+    def output_basename(self) -> str:
         return self.args[2]
 
 
 class Node:
-    def __init__(self, partition, index):
+    def __init__(self, partition: int, index: int):
         self.partition = partition
         self.index = index
 
-    def __str__(self):
-        return "%s.%s" % (self.partition, self.index)
+    def __str__(self) -> str:
+        return "%d.%d" % (self.partition, self.index)
 
 
 class Edge:
-    def __init__(self, node1, node2):
+    def __init__(self, node1: Node, node2: Node):
         self.x = node1
         self.y = node2
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "(%s):(%s)" % (self.x, self.y)
 
 
@@ -61,14 +62,14 @@ class EdgeReader:
     Creates an edge from a textual description of the cluster file ("(P.N):(P'.N')")
     """
 
-    def __init__(self, line):
+    def __init__(self, line: str):
         self.line = line
 
-    def translate(self):
+    def translate(self) -> Union[Edge, None]:
         items = self.line.replace("(", "").replace(")", "").split(":")
         if len(items) == 2:
             (node1, node2) = map(lambda s: s.split("."), items)
-            return Edge(Node(node1[0], node1[1]), Node(node2[0], node2[1]))
+            return Edge(Node(int(node1[0]), int(node1[1])), Node(int(node2[0]), int(node2[1])))
 
 
 class Partition:
@@ -76,14 +77,14 @@ class Partition:
     Maintains the information of 1 sub-graph
     """
 
-    def __init__(self, base_name, index):
+    def __init__(self, base_name: str, index: int):
         self.index = index
         self.nr_edges = 0
         file_name = "%s_%d.txt" % (base_name, int(index) + 1)
         print("creating file %s" % file_name)
         self.file = open(file_name, "wt")
 
-    def add_edge(self, edge):
+    def add_edge(self, edge: Edge):
         self.file.write("%s\n" % edge)
 
     def close(self):
@@ -95,7 +96,7 @@ class MetaGraph:
     A "virtual" graph representing the interconnects between nodes.
     """
 
-    def __init__(self, output_basename):
+    def __init__(self, output_basename: str):
         self.output_basename = output_basename
         # First write into a temporary file
         self.file_name = "%s_meta.mtx" % output_basename
@@ -109,10 +110,10 @@ class MetaGraph:
         # counter is more future proof.
         self.edge_counter = 0
 
-    def set_nr_partitions(self, nr_partitions):
+    def set_nr_partitions(self, nr_partitions: int):
         self.v_node_counter = nr_partitions + 1
 
-    def record(self, x, y):
+    def record(self, x: Node, y: Node):
         # Graph is non-oriented. No need to record edges in the two directions. The arbitrary rule then
         # is to record the interconnect iff the target partition is greater than the source one.
         # Re-adjust node numbers, because graph tools start from node number 1, not 0.
@@ -130,7 +131,16 @@ class MetaGraph:
         self.__write_header(self.file_name, self.v_node_counter, self.edge_counter)
 
     @classmethod
-    def __write_header(cls, file_name, nr_nodes, nr_edges):
+    def __write_header(cls, file_name: str, nr_nodes: int, nr_edges: int) -> Union[TextIO, None]:
+        """
+        Writes the output file header at the beginning (dummy header) and the end (with
+        nodes and edges).
+
+        :param file_name: the output file name
+        :param nr_nodes: 0 (begin) or the number of nodes in the graph
+        :param nr_edges: 0 (begin) or the number of nodes in the graph
+        :return: either the new file descriptor (begin) or None when the file is closed
+        """
         if nr_nodes != 0 and nr_edges != 0:
             with open(file_name, "r+") as f:
                 f.seek(0, 0)
@@ -138,6 +148,7 @@ class MetaGraph:
                 # Override the series of dashes created upon first call and comment out the remaining ones in
                 # a new line.
                 f.write("%d %d %d\n%% " % (nr_nodes, nr_nodes, nr_edges))
+                return None
         else:
             f = open(file_name, "wt")
             f.write("%%MatrixMarket matrix coordinate pattern symmetric\n")
@@ -153,12 +164,12 @@ class PartitionMap:
     Mapping of all the sub-graphs, indexed by partition index, along with the file that records "crossing edges".
     """
 
-    def __init__(self, output_basename):
+    def __init__(self, output_basename: str):
         self.file_map = {}
         self.output_basename = output_basename
         self.meta = MetaGraph(output_basename)
 
-    def get_or_create(self, key):
+    def get_or_create(self, key: int) -> Partition:
         """
         Searches for the partition with the given key. If not found, creates a new sub-graph.
 
@@ -183,13 +194,13 @@ class EdgeProcessor:
     Performs the actual work of this program. Gets edges one by one and writes out the fragmentation information.
     """
 
-    def __init__(self, output_basename):
+    def __init__(self, output_basename: str):
         self.partition_map = PartitionMap(output_basename)
 
-    def set_nr_partitions(self, nr_partitions):
+    def set_nr_partitions(self, nr_partitions: int):
         self.partition_map.meta.set_nr_partitions(nr_partitions)
 
-    def handle_edge(self, edge):
+    def handle_edge(self, edge: Edge):
         partition = self.partition_map.get_or_create(edge.x.partition)
         partition.add_edge(edge)
         if edge.x.partition != edge.y.partition:

@@ -9,6 +9,7 @@ Inputs to this program are:
 import random
 from datetime import datetime
 from sys import argv
+from typing import List
 
 
 class ProgramConfiguration:
@@ -18,36 +19,43 @@ class ProgramConfiguration:
     each argument type.
     """
 
-    def __init__(self, args):
+    def __init__(self, args: List[str]):
         if len(args) != 4:
             print("Usage: %s <nr nodes> <edge density> <output file>" % args[0])
             exit(1)
         self.args = args
 
-    def nr_nodes(self):
+    def nr_nodes(self) -> int:
         return int(self.args[1])
 
-    def density(self):
+    def density(self) -> int:
         return int(self.args[2])
 
-    def output_file(self):
+    def output_file(self) -> str:
         return self.args[3]
 
 
 class Edge:
-    def __init__(self, x, y):
+    def __init__(self, x: int, y: int):
         self.x = x
         self.y = y
 
 
 class RandomGraph:
-    def __init__(self, nr_nodes, density):
+    def __init__(self, nr_nodes: int, density: int):
         self.nr_nodes = nr_nodes
         self.nr_edges = 0
         self.density = density
         self.edges = []
 
-    def generate(self, seed):
+    def generate(self, seed: int):
+        """
+        Generates a random graph.
+
+        :param seed: a random seed
+        :return: self
+        """
+        random.seed(seed)
         for each_node in range(1, self.nr_nodes):
             '''
             Each node has a potential chance to be connected to this node:
@@ -70,13 +78,13 @@ class RandomGraph:
                 self.__record_edge(each_node, a_neighbor)
         return self
 
-    def __record_edge(self, x, y):
+    def __record_edge(self, x: int, y: int):
         self.nr_edges += 1
         self.edges.append((x, y))
 
 
 class MtxFile:
-    def __init__(self, output_file, random_graph):
+    def __init__(self, output_file: str, random_graph: RandomGraph):
         self.output_file = output_file
         self.random_graph = random_graph
 
