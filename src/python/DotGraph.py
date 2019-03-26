@@ -43,7 +43,7 @@ with open(configuration.output_file(), "wt") as f:
         for each_col_index in row.indices:
             row_id = each_row_index + 1
             col_id = each_col_index + 1
-            f.write("    %d -- %d [color=\"blue\"]" % (each_row_index + 1, each_col_index + 1))
+            f.write("    %d -- %d [color=\"blue\"]\n" % (each_row_index + 1, each_col_index + 1))
     f.write("  }\n\n")
 
 print("TO PLOT THIS GRAPH: neato -T<format> -o... < %s" % configuration.output_file())

@@ -80,7 +80,7 @@ class Partition:
         self.index = index
         self.nr_edges = 0
         file_name = "%s_%d.txt" % (base_name, int(index) + 1)
-        print "creating file %s" % file_name
+        print("creating file %s" % file_name)
         self.file = open(file_name, "wt")
 
     def add_edge(self, edge):
