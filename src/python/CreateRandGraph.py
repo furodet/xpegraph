@@ -56,7 +56,7 @@ class RandomGraph:
         :return: self
         """
         random.seed(seed)
-        for each_node in range(1, self.nr_nodes):
+        for each_node in range(1, self.nr_nodes + 1):
             '''
             Each node has a potential chance to be connected to this node:
               * Given that nr_nodes are present
@@ -68,7 +68,7 @@ class RandomGraph:
             the orphans.
             '''
             nr_neighbors = 0
-            for each_other_node in range(each_node + 1, self.nr_nodes):
+            for each_other_node in range(each_node + 1, self.nr_nodes + 1):
                 pick = random.randint(1, self.nr_nodes)
                 if pick < self.density:
                     self.__record_edge(each_node, each_other_node)

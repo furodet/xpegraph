@@ -73,14 +73,10 @@ class EdgeReader:
 
 
 class Partition:
-    """
-    Maintains the information of 1 sub-graph
-    """
-
     def __init__(self, base_name: str, index: int):
         self.index = index
         self.nr_edges = 0
-        file_name = "%s_%d.txt" % (base_name, int(index) + 1)
+        file_name = "%s_%d.txt" % (base_name, int(index))
         print("creating file %s" % file_name)
         self.file = open(file_name, "wt")
 
@@ -111,7 +107,7 @@ class MetaGraph:
         self.edge_counter = 0
 
     def set_nr_partitions(self, nr_partitions: int):
-        self.v_node_counter = nr_partitions + 1
+        self.v_node_counter = nr_partitions
 
     def record(self, x: Node, y: Node):
         # Graph is non-oriented. No need to record edges in the two directions. The arbitrary rule then
